@@ -5,99 +5,95 @@ class Maff {
 }
 
 class Perceptron {
-    weights = [
-        null,
-        null,
-    ];
+    weights = [];
 
-    learningRate = 0.00001;
+    learningRate = 0.01;
 
-    constructor () {
-        this.weights = this.weights.map(weight => Maff.random(-1, 1));
-    }
-
-    guess (inputs = []) {
-        // sigma (sum)
-        const sum = inputs.reduce((acc, input, key) => {
-            return acc + (input * this.weights[key]);
-        }, 0);
-
-        // step function
-        return Math.sign(sum);
-    }
-
-    train (inputs = [], target = 0) {
-        const error = target - this.guess(inputs);
-
-        for (let index = 0; index < this.weights.length; index++) {
-            this.weights[index] = this.fitWeight(
-                this.weights[index],
-                inputs[index],
-                error
-            );
+    constructor (size) {
+        for (let index = 0; index < size; index++) {
+            this.weights.push(Maff.random(-1, 1));
         }
     }
 
-    // gradient descent
-    fitWeight (weight, input, error) {
-        return weight + (error * input * this.learningRate);
+    guess (inputs = []) {
+        return inputs
+            .map((input, key) => {
+                return input * this.weights[key];
+            })
+            .map(input => Math.sign(input) > 0 ? 1 : 0);
+    }
+
+    train (inputs = [], targets = []) {
+        const guess = this.guess(inputs);
+
+        const errors = targets.map((target, index) => {
+            return target - guess[index]
+        });
+
+        this.weights = this.weights.map((weight, index) => {
+            return weight + (errors[index] * inputs[index] * this.learningRate);
+        });
     }
 }
 
-const points = [];
-const perceptron = new Perceptron();
+let perceptron = null;
+let originalImage = [];
+let noisedImage = [];
 
 function setup () {
     const width = 500;
     const height = 500;
 
-    createCanvas(width, height);
-    background('#ccc');
+    loadImage('original.png', img => {
+        image(img, 0, 0);
 
-    line(0, 0, width, height);
+        img.loadPixels();
 
-    // generating dataset
-    for (let index = 0; index < 100; index++) {
-        const x = Maff.random(0, width);
-        const y = Maff.random(0, height);
+        for (let index = 0; index < img.pixels.length; index+=4) {
+            const isWhite = img.pixels[index] > 0 ? 1 : 0;
+            originalImage.push(isWhite);
+        }
+    });
 
-        const point = {
-            x,
-            y,
-            label: x > y ? 1 : -1,
-            color: x > y ? 'white' : 'black',
-        };
+    loadImage('noised.png', img => {
+        image(img, 28, 0);
 
-        points.push(point);
-    }
+        img.loadPixels();
 
-    // printing dataset
-    for (const point of points) {
-        fill(point.color);
-        noStroke();
-        circle(point.x, point.y, 10);
-    }
+        for (let index = 0; index < img.pixels.length; index+=4) {
+            const isWhite = img.pixels[index] > 0 ? 1 : 0;
+            noisedImage.push(isWhite);
+        }
 
-    frameRate(1);
+        perceptron = new Perceptron(noisedImage.length);
+    });
+
+    // frameRate(5);
 }
 
 function draw () {
-    // const output = perceptron.guess([-1, 0.5]);
-    // console.log(output);
-
-    for (const point of points) {
-        let inputs = [point.x, point.y];
-
-        perceptron.train(inputs, point.label);
-
-        const guess = perceptron.guess(inputs);
-
-        const color = guess === point.label ? 'lime' : 'red';
-        fill(color);
-        noStroke();
-        circle(point.x, point.y, 5);
-
-        // fill(point.color);
-        // circle(point.x, point.y, 10);
+    if (! perceptron) {
+        return;
     }
+
+    perceptron.train(noisedImage, originalImage);
+
+    const guess = perceptron.guess(noisedImage);
+
+    const guessImage = createImage(28, 28);
+
+    guessImage.loadPixels();
+
+    for (let x = 0; x < guessImage.width; x++) {
+        for (let y = 0; y < guessImage.height; y++) {
+            const index = y * guessImage.width + x;
+            const fillColor = guess[index] ? 'white' : 'black';
+
+            guessImage.set(x, y, color(fillColor));
+        }
+    }
+
+    guessImage.updatePixels();
+
+    image(guessImage, 56, 0);
 }
