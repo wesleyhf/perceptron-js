@@ -1,7 +1,7 @@
 # perceptron-js
 :books: Perceptron studying with Javascript and p5.js
 
-> **noise** branch contains another studying using a noised image
+> [noise](https://github.com/wesleyhf/perceptron-js/tree/noise) branch contains another studying using a noised image
 
 # Reference
 
